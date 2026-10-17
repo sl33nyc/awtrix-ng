@@ -291,6 +291,43 @@ static void test_per_app_duration_overrides_global() {
   TEST_ASSERT_EQUAL_STRING("Time", e.currentAppId().c_str());
 }
 
+static void test_saved_app_timing_overrides_and_restores_default() {
+  sound::AudioRouter so; FDisplay di; FSystem sy;
+  CoreEngine e(so, di, sy);
+  TEST_ASSERT_FALSE(e.appDurationOverrideMs("Time").has_value());
+  TEST_ASSERT_TRUE(e.setAppOrder(R"({"order":["Time","Date"],"disabled":["Temperature","Humidity","Battery"],"appDurationsMs":{"Time":2000,"Date":4000,"quote\"":3000}})"));
+  TEST_ASSERT_TRUE(e.appDurationOverrideMs("Time").has_value());
+  TEST_ASSERT_EQUAL_INT(2000, e.appDurationOverrideMs("Time").value());
+  const std::string saved = e.appOrderJson();
+  CoreEngine restored(so, di, sy);
+  TEST_ASSERT_TRUE(restored.setAppOrder(saved));
+  TEST_ASSERT_TRUE(restored.appDurationOverrideMs("quote\"").has_value());
+  TEST_ASSERT_EQUAL_INT(3000, restored.appDurationOverrideMs("quote\"").value());
+  TEST_ASSERT_TRUE(restored.setAppOrder(R"({"disabled":[]})"));
+  TEST_ASSERT_TRUE(restored.appDurationOverrideMs("Time").has_value());
+  TEST_ASSERT_EQUAL_INT(2000, restored.appDurationOverrideMs("Time").value());
+  for (const auto* bad : {"-1", "3600001", "1.5", "null", "true"}) {
+    TEST_ASSERT_FALSE(e.setAppOrder(std::string(R"({"disabled":[],"appDurationsMs":{"Time":)") + bad + "}}"));
+    TEST_ASSERT_EQUAL_STRING(saved.c_str(), e.appOrderJson().c_str());
+  }
+  e.execute(cmd(CommandType::SwitchApp, "", R"({"name":"Time","fast":true})"));
+  e.tick(0);
+  e.tick(1999);
+  TEST_ASSERT_FALSE(e.appHost().inTransition());
+  e.tick(2000);
+  TEST_ASSERT_TRUE(e.appHost().inTransition());
+  TEST_ASSERT_TRUE(e.setAppOrder(R"({"disabled":[],"appDurationsMs":{"Time":0}})"));
+  TEST_ASSERT_FALSE(e.appDurationOverrideMs("Time").has_value());
+  TEST_ASSERT_TRUE(e.appDurationOverrideMs("Date").has_value());
+  TEST_ASSERT_EQUAL_INT(4000, e.appDurationOverrideMs("Date").value());
+  e.tick(3000);
+  e.execute(cmd(CommandType::SwitchApp, "", R"({"name":"Time","fast":true})"));
+  e.tick(9999);
+  TEST_ASSERT_FALSE(e.appHost().inTransition());
+  e.tick(10000);
+  TEST_ASSERT_TRUE(e.appHost().inTransition());
+}
+
 static void test_frequent_pushes_do_not_freeze_the_rotation() {
   sound::AudioRouter so; FDisplay di; FSystem sy;
   CoreEngine e(so, di, sy);
@@ -939,7 +976,7 @@ static void test_switching_one_app_off_keeps_the_rest_of_the_off_list() {
   TEST_ASSERT_FALSE(e.isEnabled("Humidity"));
   TEST_ASSERT_EQUAL_UINT(2u, (unsigned)e.appHost().count());
   TEST_ASSERT_EQUAL_STRING(
-      "{\"order\":[\"Time\",\"Date\",\"Battery\"],\"disabled\":[\"Temperature\",\"Humidity\",\"Date\"]}",
+      "{\"order\":[\"Time\",\"Date\",\"Battery\"],\"disabled\":[\"Temperature\",\"Humidity\",\"Date\"],\"appDurationsMs\":{}}",
       persisted.c_str());
 }
 
@@ -1169,6 +1206,7 @@ int main(int, char**) {
   RUN_TEST(test_custom_app_capacity_is_507);
   RUN_TEST(test_notification_capacity_is_507);
   RUN_TEST(test_per_app_duration_overrides_global);
+  RUN_TEST(test_saved_app_timing_overrides_and_restores_default);
   RUN_TEST(test_frequent_pushes_do_not_freeze_the_rotation);
   RUN_TEST(test_unknown_effect_or_overlay_name_is_rejected);
   RUN_TEST(test_humidity_app_gated_on_sensor_capability);

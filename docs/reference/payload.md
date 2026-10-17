@@ -407,7 +407,7 @@ several times in `draw()`. See [Display and drawing](../guides/scripting/drawing
 
 | Key | Type | Range | Default | Meaning |
 |---|---|---|---|---|
-| `durationMs` | long | ms | `0` | How long the app or notification is shown. 0 or less uses the global `appDurationMs` (7000). Works for pushed apps and notifications |
+| `durationMs` | long | ms | `0` | How long the app or notification is shown. 0 or less uses the global `appDurationMs` (7000). A pushed app's saved per-app time takes priority. Works for pushed apps and notifications |
 | `lifetimeMs` | long | ms, 0 = forever | `0` | **Pushed apps only.** Remove or mark the app after this time |
 | `lifetimeExpiry` | string | `remove` · `mark` | `remove` | What happens when the lifetime runs out |
 | `repeat` | int | `0` = off | `0` | How many times scrolling text runs across the display |
@@ -417,6 +417,10 @@ several times in `draw()`. See [Display and drawing](../guides/scripting/drawing
 `durationMs` sets how long the app is shown, for **both** pushed apps and notifications. With 0
 or less, the global `appDurationMs` setting (7000 ms) is used. So one pushed app can stay longer
 or shorter than the others without changing the global setting.
+
+A positive **Time per this app** value saved from the Apps tab takes priority over a pushed app's
+`durationMs`. Enter `0` there to let `durationMs` work again. Notifications have no saved per-app
+time.
 
 For a notification with `hold: true`, `durationMs` is ignored.
 
@@ -454,8 +458,11 @@ Two cases where `repeat` does not decide:
 - **You set `durationMs` yourself.** It then stays at least that long.
   `{"text":"...","repeat":1,"durationMs":20000}` is shown for 20 seconds even if the text is read
   in 4.
+- **You saved a positive Time per this app value.** It sets the turn length even if the requested
+  number of scroll runs has not finished.
 
-It works the same for pushed apps and notifications.
+Apart from that saved pushed-app override, `repeat` works the same for pushed apps and
+notifications.
 
 ## Background
 

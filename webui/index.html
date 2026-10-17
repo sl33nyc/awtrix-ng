@@ -434,17 +434,17 @@ details.appgrp:not([open]){gap:0}
   .approw .racts{flex-wrap:wrap;margin-top:8px}
   .approw .racts>button{min-height:40px}
 }
-.appcfg .cfgbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 0 4px}
-.appcfg .cfgbar button{min-height:40px;font-size:13px}
+.appcfg .cfgbar,.appcfg .cfgtiming{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 0 4px}
+.appcfg .cfgbar button,.appcfg .cfgtiming button{min-height:40px;font-size:13px}
 @media(max-width:680px){
   .appcfg{padding:4px 4px 0}
   .appcfg .frow{grid-template-columns:minmax(0,1fr);gap:8px;padding:14px 0}
   .appcfg .ctl{width:min(280px,100%)}
 }
 @media(max-width:400px){
-  .appcfg .cfgbar{display:grid;grid-template-columns:1fr 1fr}
+  .appcfg .cfgbar,.appcfg .cfgtiming{display:grid;grid-template-columns:1fr 1fr}
   .appcfg .cfgbar .defaults{grid-column:1/-1;justify-self:start}
-  .appcfg .cfgbar .grow{display:none}
+  .appcfg .cfgbar .grow,.appcfg .cfgtiming .grow{display:none}
 }
 .edwrap{border:1px solid var(--border);border-radius:10px;background:var(--card)}
 .edwrap:focus-within{border-color:var(--acc)}
@@ -1178,7 +1178,7 @@ const FIELDS={
  brightness:F('bright','slider','Brightness',BRI_H,{min:0,max:255}),
  autoBrightness:F('bright','toggle','Auto brightness','Follows the ambient light sensor.'),
  power:F('bright','toggle','Display on','Turns the matrix off without cutting power.'),
- appDurationMs:F('apps','number','Time per app','How long each app stays.',{min:1000,max:3600000,step:500,unit:'ms'}),
+ appDurationMs:F('apps','number','Default time per app','How long each app stays unless it has its own timing.',{min:1000,max:3600000,step:500,unit:'ms'}),
  autoTransition:F('apps','toggle','Auto rotation','Moves to the next app on its own.'),
  transitionDurationMs:F('apps','number','Transition duration','Length of the switch. 0 = instant.',{min:0,max:5000,unit:'ms'}),
  transitionEffect:F('apps','select','Transition effect','Animation between two apps.',{opt:'transitions'}),
@@ -2474,7 +2474,8 @@ async function viewApps(view){
     //linux:begin
     if(a.origin!=='builtin'&&S.oauthApps&&S.oauthApps.has(a.name))a={...a,config:true};
     //linux:end
-    if(!a.config||panelTaken.has(key))return[null,null];
+    const timed=!a.headless&&a.origin!=='module';
+    if((!a.config&&!timed)||panelTaken.has(key))return[null,null];
     panelTaken.add(key);
     let box=panels.get(key);
     if(!box){box=el('div',{class:'appcfg',hidden:'hidden'});panels.set(key,box);}
@@ -2482,7 +2483,40 @@ async function viewApps(view){
       const open=box.hidden;
       box.hidden=!open;
       render();
-      if(open&&!box.dataset.loaded&&await fillConfigPanel(a.name,box,null,a.origin==='builtin'))box.dataset.loaded='1';
+      if(open&&!box.dataset.loaded){
+        box.replaceChildren();
+        if(timed){
+          const save=el('button',{class:'pri',disabled:true},'Save time');
+          const field=mkField('appDurationMs',{
+            w:'number',l:'Time per this app',
+            h:'0 = use the global default or the app’s own timing. A positive value overrides both.',
+            min:0,max:3600000,step:1,unit:'ms',linkLabel:true,
+          },a.appDurationMs||0,()=>{save.disabled=!field.dirty()||!field.row.querySelector('input').checkValidity();});
+          const input=field.row.querySelector('input');
+          save.addEventListener('click',async()=>{
+            if(!input.reportValidity())return;
+            const value=field.get();
+            save.disabled=true;input.disabled=true;
+            saving=saving.then(async()=>{
+              try{
+                await req('PUT','/api/v1/apps/order',{
+                  disabled:disabled.map(a=>a.name),appDurationsMs:{[a.name]:value},
+                });
+                a.appDurationMs=value;field.rebase();toast(t('saved'));
+              }catch(e){toastErr(e);}
+              input.disabled=false;
+              save.disabled=!field.dirty()||!input.checkValidity();
+            });
+            await saving;
+          });
+          box.append(field.row,el('div',{class:'cfgtiming'},el('span',{class:'grow'}),save));
+        }
+        if(a.config){
+          const config=el('div',{class:'appconfigfields'});box.append(config);
+          if(!await fillConfigPanel(a.name,config,null,a.origin==='builtin'))return;
+        }
+        box.dataset.loaded='1';
+      }
     };
     const label=t(box.hidden?'cfgTitle':'cfgHide');
     const btn=el('button',{class:'icon cfgbtn'+(box.hidden?'':' pri'),title:label,'aria-label':label,

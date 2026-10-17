@@ -180,13 +180,17 @@ curl -X PATCH http://<awtrix-ip>/api/v1/settings \
 | Key | Type | Range | Default | Units | Meaning |
 |---|---|---|---|---|---|
 | `autoTransition` | boolean | - | `true` | - | Switch to the next app automatically. With `false` the app changes only on a button press or an API call. |
-| `appDurationMs` | integer | ≥ 0 | `7000` | ms | How long each app is shown. Also the default duration of a notification. No upper limit. |
+| `appDurationMs` | integer | ≥ 0 | `7000` | ms | Default time for an app without a saved per-app time or an app-provided time. Also the default duration of a notification. No upper limit. |
 | `transitionEffect` | string | see below | `"Rain"` | - | The animation between two apps. |
 | `transitionDirection` | string | `normal` · `reverse` | `"normal"` | - | Reverses the movement of transitions that have a direction. The app order stays the same. |
 | `transitionDurationMs` | integer | 0–2147483647 | `1000` | ms | Length of the animation. `0` = instant. |
 
 The apps rotate only when there are **at least two** in the list. With one app, AWTRIX stays on it
 whatever `autoTransition` says.
+
+A positive **Time per this app** value from the Apps tab takes priority over this default, a pushed
+app's `durationMs`, a script's `duration()`, and scroll completion. `0` removes that saved override.
+See [Change how long each app stays](../guides/pushed-apps.md#timing-and-switching).
 
 ### `transitionEffect` values
 

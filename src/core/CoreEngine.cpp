@@ -113,8 +113,11 @@ void CoreEngine::tick(int64_t nowMs) {
     const long d = scripts_->scriptDurationMs(cur);
     if (d > 0) dwellMs = d;
   }
-  const bool holds = rotationHold_ || scriptRotationPaused_ ||
-                     (scripts_ && isScriptApp(cur) && scripts_->scriptScrollHolds(cur));
+  const auto overrideMs = appDurationOverrideMs(cur);
+  if (overrideMs) dwellMs = *overrideMs;
+  const bool holds = scriptRotationPaused_ ||
+                     (!overrideMs && (rotationHold_ ||
+                      (scripts_ && isScriptApp(cur) && scripts_->scriptScrollHolds(cur))));
   appHost_.tick(nowMs, dwellMs, state_.settings().transitionDurationMs,
                 state_.settings().autoTransition && !holds);
 }
@@ -202,7 +205,15 @@ std::string CoreEngine::appOrderJson() const {
     if (i) out += ',';
     api::appendJsonString(out, disabled_[i]);
   }
-  out += "]}";
+  out += "],\"appDurationsMs\":{";
+  bool first = true;
+  for (const auto& entry : appDurationsMs_) {
+    if (!first) out += ',';
+    first = false;
+    api::appendJsonString(out, entry.first);
+    out += ':' + std::to_string(entry.second);
+  }
+  out += "}}";
   return out;
 }
 
@@ -443,6 +454,25 @@ bool CoreEngine::setAppOrder(const std::string& json) {
   // "disabled" has to be there, "order" is optional — leaving it out keeps the current sequence.
   if (!o.ok() || !namedHidden) return false;
 
+  // Duration entries patch the saved overrides; zero restores the default.
+  auto durations = appDurationsMs_;
+  auto timing = api::memberValue(root, "appDurationsMs");
+  if (api::present(timing)) {
+    if (!timing.enterObject()) return false;
+    while (timing.nextMember()) {
+      long long value = 0;
+      const std::string encodedName = "\"" + std::string(timing.key()) + "\"";
+      std::string name;
+      if (!api::JsonReader(encodedName).appendString(name)) return false;
+      if (name.empty() || !timing.isInteger() || !timing.asLong(value) ||
+          value < 0 || value > 3600000) return false;
+      if (value == 0) durations.erase(name);
+      else durations[name] = static_cast<long>(value);
+      if (!timing.skipValue()) return false;
+    }
+    if (!timing.ok()) return false;
+  }
+
   std::vector<std::string> order = order_;
   if (namedOrder) {
     order.clear();
@@ -455,6 +485,7 @@ bool CoreEngine::setAppOrder(const std::string& json) {
 
   order_ = std::move(order);
   disabled_ = std::move(disabled);
+  appDurationsMs_ = std::move(durations);
   rebuildAppList();
   if (orderSaveFn_) orderSaveFn_(appOrderJson());
   return true;

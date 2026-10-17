@@ -718,6 +718,7 @@ place until the next push.
 | Key | Type | Meaning |
 |---|---|---|
 | `name` | string | app name |
+| `appDurationMs` | integer | saved time for this app in milliseconds. `0` means there is no saved override, so the app uses its own timing or the global default |
 | `enabled` | boolean | whether it runs |
 | `inLoop` | boolean | whether it is in the rotation |
 | `present` | boolean | whether the app exists on AWTRIX right now. `false` for a name that only keeps a place for an app that is not there |
@@ -749,14 +750,14 @@ that by itself at any moment.
 
 ```json
 [
-  {"name":"Time","enabled":true,"inLoop":true,"slot":0,"present":true,"origin":"builtin","config":true},
-  {"name":"weather","enabled":true,"inLoop":true,"slot":1,"present":true,"origin":"pushed","icon":"1"},
-  {"name":"doorbell","enabled":true,"inLoop":false,"slot":2,"present":true,"origin":"script",
+  {"name":"Time","appDurationMs":0,"enabled":true,"inLoop":true,"slot":0,"present":true,"origin":"builtin","config":true},
+  {"name":"weather","appDurationMs":12000,"enabled":true,"inLoop":true,"slot":1,"present":true,"origin":"pushed","icon":"1"},
+  {"name":"doorbell","appDurationMs":0,"enabled":true,"inLoop":false,"slot":2,"present":true,"origin":"script",
    "skipped":false,"headless":true,"config":false,"error":null,
    "meta":{"name":"Doorbell","desc":"","author":"me","version":"1.0","icons":[],"requires":[],
      "needs":[{"name":"audio.rtttl","missing":false}],"display":null}},
-  {"name":"co2","enabled":true,"inLoop":false,"slot":3,"present":false,"origin":null},
-  {"name":"clock","enabled":false,"inLoop":false,"slot":null,"present":true,"origin":"script",
+  {"name":"co2","appDurationMs":0,"enabled":true,"inLoop":false,"slot":3,"present":false,"origin":null},
+  {"name":"clock","appDurationMs":0,"enabled":false,"inLoop":false,"slot":null,"present":true,"origin":"script",
    "skipped":false,"headless":false,"config":true,"error":null,
    "meta":{"name":"Wall Clock","desc":"","author":"me","version":"1.2","icons":["sun","moon"],
      "requires":[],"needs":[],"display":{"width":64,"height":32,"fits":false}}}
@@ -867,14 +868,15 @@ curl -X POST http://<awtrix-ip>/api/v1/apps/previous
 
 ### PUT /api/v1/apps/order
 
-Sets which apps are switched on, and the order in which they are shown.
+Sets which apps are switched on, their order, and saved per-app times.
 
-**Request:** an object with two lists of app names:
+**Request:** an object with two lists of app names and an optional map of times:
 
 | Key | Meaning |
 |---|---|
 | `order` | the apps that run, in the order they are shown |
 | `disabled` | the apps that are switched off |
+| `appDurationsMs` | app names mapped to whole milliseconds from 0 to 3600000. A positive value saves an override. `0` removes it |
 
 **`disabled` is always required. `order` is optional, but only together with `disabled`.**
 
@@ -882,12 +884,19 @@ Sets which apps are switched on, and the order in which they are shown.
 |---|---|
 | `{"order":[…],"disabled":[…]}` | sets both |
 | `{"disabled":[…]}` | sets which apps are off, keeps the order |
+| `{"disabled":[…],"appDurationsMs":{"weather":12000}}` | keeps the order and patches only `weather`'s saved time |
+| `{"disabled":[…],"appDurationsMs":{"weather":0}}` | keeps the order and removes `weather`'s saved time |
 | `{"order":[…]}` | **400** |
 | `["Time","weather"]` | **400**: the body must be an object |
 
 **`disabled` is the complete list of switched-off apps.** Every app it does not name is switched
 on, also one that was off before. To switch one app on or off and leave the others as they are, use
 [PUT /api/v1/apps/{name}/enabled](#put-apiv1appsnameenabled).
+
+`appDurationsMs` has patch behavior even though this is a `PUT`: an omitted app keeps its saved
+time, and leaving the whole map out keeps every saved time. A positive saved time takes priority
+over the app's own duration and scroll completion. `GET /api/v1/apps` reports the saved value, or
+`0` when there is none.
 
 * **Duplicates count** in `order`: list an app twice and it is shown twice per round, each time
   with its own `slot`.
@@ -899,7 +908,7 @@ on, also one that was off before. To switch one app on or off and leave the othe
 * A name in `disabled` stays switched off while the app is not there.
 * Such names are listed in `GET /api/v1/apps` with `present: false`. Deleting a **script** is the
   exception: it removes the name from both lists.
-* Both lists are kept after a restart.
+* Both lists and the per-app times are kept after a restart.
 
 **Response:** `200` `{"ok":true}`.
 
@@ -907,7 +916,7 @@ on, also one that was off before. To switch one app on or off and leave the othe
 
 | Status | Condition |
 |---|---|
-| 400 | not valid JSON, a body that is not an object, or one without `disabled` (`invalidJson`) |
+| 400 | not valid JSON, a body that is not an object, one without `disabled`, or an `appDurationsMs` entry with an empty name, a non-integer value, or a value outside 0–3600000 (`invalidJson`) |
 | 405 | wrong method: `allowed: PUT` |
 | 507 | `insufficientStorage`, `applied, not saved yet`: active until restart, but saving failed |
 

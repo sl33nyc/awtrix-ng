@@ -426,17 +426,17 @@ details.appgrp:not([open]){gap:0}
   .approw .racts{flex-wrap:wrap;margin-top:8px}
   .approw .racts>button{min-height:40px}
 }
-.appcfg .cfgbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 0 4px}
-.appcfg .cfgbar button{min-height:40px;font-size:13px}
+.appcfg .cfgbar,.appcfg .cfgtiming{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 0 4px}
+.appcfg .cfgbar button,.appcfg .cfgtiming button{min-height:40px;font-size:13px}
 @media(max-width:680px){
   .appcfg{padding:4px 4px 0}
   .appcfg .frow{grid-template-columns:minmax(0,1fr);gap:8px;padding:14px 0}
   .appcfg .ctl{width:min(280px,100%)}
 }
 @media(max-width:400px){
-  .appcfg .cfgbar{display:grid;grid-template-columns:1fr 1fr}
+  .appcfg .cfgbar,.appcfg .cfgtiming{display:grid;grid-template-columns:1fr 1fr}
   .appcfg .cfgbar .defaults{grid-column:1/-1;justify-self:start}
-  .appcfg .cfgbar .grow{display:none}
+  .appcfg .cfgbar .grow,.appcfg .cfgtiming .grow{display:none}
 }
 .edwrap{border:1px solid var(--border);border-radius:10px;background:var(--card)}
 .edwrap:focus-within{border-color:var(--acc)}

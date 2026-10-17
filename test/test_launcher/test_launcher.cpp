@@ -513,7 +513,7 @@ static void test_a_real_ondemand_script_runs_only_in_its_session() {
 
   std::string json;
   appendAppsJson(json, engine, &host, nullptr);
-  TEST_ASSERT_TRUE(json.find("\"name\":\"Game\",\"enabled\":true,\"inLoop\":false,\"slot\":null,"
+  TEST_ASSERT_TRUE(json.find("\"name\":\"Game\",\"appDurationMs\":0,\"enabled\":true,\"inLoop\":false,\"slot\":null,"
                              "\"present\":true,\"origin\":\"script\"") != std::string::npos);
   TEST_ASSERT_TRUE(json.find("\"ondemand\":true") != std::string::npos);
   TEST_ASSERT_NULL(registry.find("Game"));

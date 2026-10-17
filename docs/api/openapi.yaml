@@ -454,6 +454,14 @@ paths:
                   type: object
                   properties:
                     name: { type: string }
+                    appDurationMs:
+                      type: integer
+                      minimum: 0
+                      maximum: 3600000
+                      description: >
+                        Saved time for this app in milliseconds. Zero means no
+                        saved override, so the app uses its own timing or the
+                        global default.
                     enabled:
                       type: boolean
                       description: >
@@ -587,6 +595,12 @@ paths:
         keeps the order. A body without `disabled`, or one that is not an
         object, is 400.
 
+        `appDurationsMs` maps app names to saved times. It patches only the
+        names it contains. A whole number from 1 through 3600000 saves an
+        override, and zero removes it. A saved override takes priority over
+        timing supplied by the app and over scroll completion. Leaving the map
+        out keeps every saved override.
+
         A switched-off script runs nothing at all. A headless script never
         draws, so naming it in `order` keeps it running without giving it a
         place in the rotation. A name keeps its place even when no such app
@@ -609,6 +623,12 @@ paths:
                 disabled:
                   type: array
                   items: { type: string }
+                appDurationsMs:
+                  type: object
+                  additionalProperties:
+                    type: integer
+                    minimum: 0
+                    maximum: 3600000
       responses:
         "415": { $ref: "#/components/responses/WrongContentType" }
         "507":
@@ -3824,7 +3844,10 @@ components:
             Reverses the movement of direction-aware transitions without
             changing app order. Symmetric transitions are unaffected.
         transitionDurationMs: { type: integer, minimum: 0 }
-        appDurationMs: { type: integer, minimum: 0 }
+        appDurationMs:
+          type: integer
+          minimum: 0
+          description: Default app time and default notification duration. A saved per-app time or timing supplied by an app takes priority for that app.
         timeMode:
           type: integer
           minimum: 0

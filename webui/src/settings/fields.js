@@ -7,7 +7,7 @@ const FIELDS={
  brightness:F('bright','slider','Brightness',BRI_H,{min:0,max:255}),
  autoBrightness:F('bright','toggle','Auto brightness','Follows the ambient light sensor.'),
  power:F('bright','toggle','Display on','Turns the matrix off without cutting power.'),
- appDurationMs:F('apps','number','Time per app','How long each app stays.',{min:1000,max:3600000,step:500,unit:'ms'}),
+ appDurationMs:F('apps','number','Default time per app','How long each app stays unless it has its own timing.',{min:1000,max:3600000,step:500,unit:'ms'}),
  autoTransition:F('apps','toggle','Auto rotation','Moves to the next app on its own.'),
  transitionDurationMs:F('apps','number','Transition duration','Length of the switch. 0 = instant.',{min:0,max:5000,unit:'ms'}),
  transitionEffect:F('apps','select','Transition effect','Animation between two apps.',{opt:'transitions'}),

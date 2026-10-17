@@ -56,7 +56,7 @@ async function testEditing() {
       field('temperatureColor', 'color', 0, { nullable: true, default: null })] },
   };
   await goto(window, '#/apps');
-  assert(!rowFor(doc, 'Status').querySelector('.cfgbtn'), 'an app without settings offers none');
+  assert(!!rowFor(doc, 'Status').querySelector('.cfgbtn'), 'an app without specific settings offers timing');
   const panel = await open(doc, 'Time');
   assert(netlog.includes('GET /api/v1/apps/builtin/Time/config'), 'a built-in reads its own settings route');
   const mode = control(panel, 'timeMode').querySelector('select');
@@ -234,7 +234,7 @@ async function testOptionalScriptGroups() {
   await goto(window, '#/apps');
   let panel = await open(doc, 'Weather');
   const group = name => [...panel.querySelectorAll('.cfgsection')].find(s => s.dataset.group === name);
-  assert([...panel.children].filter(n => n.matches('.cfgsection,.frow'))
+  assert([...panel.querySelector('.appconfigfields').children].filter(n => n.matches('.cfgsection,.frow'))
     .map(n => n.dataset.group || n.querySelector('.key').textContent).join('|') ===
     ['lead', 'Weather data', 'time', heading, 'tail'].join('|'),
     'groups follow their first setting and settings without a group stay outside');

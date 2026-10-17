@@ -144,7 +144,8 @@ async function viewApps(view){
     //linux:begin
     if(a.origin!=='builtin'&&S.oauthApps&&S.oauthApps.has(a.name))a={...a,config:true};
     //linux:end
-    if(!a.config||panelTaken.has(key))return[null,null];
+    const timed=!a.headless&&a.origin!=='module';
+    if((!a.config&&!timed)||panelTaken.has(key))return[null,null];
     panelTaken.add(key);
     let box=panels.get(key);
     if(!box){box=el('div',{class:'appcfg',hidden:'hidden'});panels.set(key,box);}
@@ -152,7 +153,40 @@ async function viewApps(view){
       const open=box.hidden;
       box.hidden=!open;
       render();
-      if(open&&!box.dataset.loaded&&await fillConfigPanel(a.name,box,null,a.origin==='builtin'))box.dataset.loaded='1';
+      if(open&&!box.dataset.loaded){
+        box.replaceChildren();
+        if(timed){
+          const save=el('button',{class:'pri',disabled:true},'Save time');
+          const field=mkField('appDurationMs',{
+            w:'number',l:'Time per this app',
+            h:'0 = use the global default or the app’s own timing. A positive value overrides both.',
+            min:0,max:3600000,step:1,unit:'ms',linkLabel:true,
+          },a.appDurationMs||0,()=>{save.disabled=!field.dirty()||!field.row.querySelector('input').checkValidity();});
+          const input=field.row.querySelector('input');
+          save.addEventListener('click',async()=>{
+            if(!input.reportValidity())return;
+            const value=field.get();
+            save.disabled=true;input.disabled=true;
+            saving=saving.then(async()=>{
+              try{
+                await req('PUT','/api/v1/apps/order',{
+                  disabled:disabled.map(a=>a.name),appDurationsMs:{[a.name]:value},
+                });
+                a.appDurationMs=value;field.rebase();toast(t('saved'));
+              }catch(e){toastErr(e);}
+              input.disabled=false;
+              save.disabled=!field.dirty()||!input.checkValidity();
+            });
+            await saving;
+          });
+          box.append(field.row,el('div',{class:'cfgtiming'},el('span',{class:'grow'}),save));
+        }
+        if(a.config){
+          const config=el('div',{class:'appconfigfields'});box.append(config);
+          if(!await fillConfigPanel(a.name,config,null,a.origin==='builtin'))return;
+        }
+        box.dataset.loaded='1';
+      }
     };
     const label=t(box.hidden?'cfgTitle':'cfgHide');
     const btn=el('button',{class:'icon cfgbtn'+(box.hidden?'':' pri'),title:label,'aria-label':label,

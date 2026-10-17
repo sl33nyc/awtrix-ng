@@ -32,8 +32,9 @@ straight past it.
 - **When the rotation moves on to your app**, it asks `should_show()`. `false` skips your app for
   this round. Anything else, or no `should_show()` at all, shows it.
 - **When your app appears**, `on_show()` runs, then `duration()` is asked. The milliseconds it
-  returns are the time of this turn. Without a number, the turn lasts the device's app time, 7
-  seconds unless the owner [changed it](../../reference/settings.md#app-rotation).
+  returns are the time of this turn. Without a number, the turn lasts the default app time, 7
+  seconds unless the owner [changed it](../../reference/settings.md#app-rotation). A saved
+  **Time per this app** value takes priority over both.
 - **While your app is shown**, `draw()` paints about 40 times a second. When the time is up, the
   next app slides in, and `on_hide()` runs once your app has left.
 - **All the time, shown or not**, `loop()` runs about once a second, and timers and callbacks run
@@ -96,7 +97,8 @@ moves on to it. On the **Apps** tab, an app that skipped this round has the labe
 ## Stay longer {#setting-your-own-dwell-time}
 
 `duration()` sets how long your app stays: return a number of milliseconds. It works like a
-pushed app's `durationMs`.
+pushed app's `durationMs`. A positive **Time per this app** value saved on the Apps tab takes
+priority over it.
 
 ```berry
 class Slow
@@ -114,11 +116,11 @@ return Slow()
 ```
 
 `duration()` is asked each time your app appears, so the value can change: long while a message is
-up, normal otherwise. **Return `0` or nothing to use the device's app time.**
+up, normal otherwise. **Return `0` or nothing to use the default app time.**
 
 To stay until a moving text was read, pass `{"repeat": 1}` to `scroll_text()`, as
-[Drawing](drawing.md#keep-the-app-until-the-text-was-read) shows. Your app then stays at least its
-time, and longer while the text has not run through once.
+[Drawing](drawing.md#keep-the-app-until-the-text-was-read) shows. Without a saved per-app time, your
+app then stays at least its time, and longer while the text has not run through once.
 
 ## Background scripts {#running-without-ever-being-shown}
 
@@ -424,7 +426,9 @@ and deleting the module deletes its settings.
 ### The time of a turn
 
 - `duration()` is asked each time your app appears, also when it is shown by name.
-- A missing `duration()`, a number below 1 and a broken app all use the device's app time.
+- A positive saved per-app time wins over `duration()` and scrolling holds.
+- Without one, a missing `duration()`, a number below 1 and a broken app all use the default app
+  time.
 - `duration()` only sets how long your app stays. It does not decide whether your app appears
   (that is `should_show()`) or where it sits in the rotation.
 

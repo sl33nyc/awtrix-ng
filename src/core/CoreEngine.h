@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <functional>
+#include <map>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -114,6 +116,11 @@ class CoreEngine : public BuiltinAppProfile, public IAppService, public INotifyS
   NotificationManager& notifications() { return notifs_; }
   std::vector<std::string> allApps() const;
   std::string appOrderJson() const;
+  std::optional<long> appDurationOverrideMs(const std::string& name) const {
+    const auto it = appDurationsMs_.find(name);
+    if (it == appDurationsMs_.end()) return std::nullopt;
+    return it->second;
+  }
   const std::vector<std::string>& appOrder() const { return order_; }
   std::vector<std::string> knownApps() const;
   bool isPresent(const std::string& name) const;
@@ -217,6 +224,7 @@ class CoreEngine : public BuiltinAppProfile, public IAppService, public INotifyS
   // Both may name apps that do not exist at the moment, so a returning sender keeps its slot.
   std::vector<std::string> order_;
   std::vector<std::string> disabled_;
+  std::map<std::string, long> appDurationsMs_;
   std::function<void(const std::string&)> orderSaveFn_;
   IScriptService* scripts_ = nullptr;
   const EffectRegistry* overlays_ = nullptr;

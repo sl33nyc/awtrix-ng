@@ -382,13 +382,14 @@ Over MQTT, publish the same body to `cmd/apps/order`, and `true` or `false` to
 
 ### The order is remembered across reboots
 
-The order is stored automatically and restored after a restart. You set it once. There is nothing
-else to do.
+The order and each app's time are stored automatically and restored after a restart. You set them
+once. There is nothing else to do.
 
-What is saved is two lists of **names**: the order, and the switched-off apps. An app that is not
-there yet waits. When the app arrives, it takes its saved place. This works for scripts loaded at
-startup and for pushed apps sent later by your automation. This is how a pushed app keeps its
-position, even though the app itself is lost at every restart.
+The saved arrangement contains two lists of **names**, the order and the switched-off apps, plus
+any per-app times. An app that is not there yet waits. When the app arrives, it takes its saved
+place and time. This works for scripts loaded at startup and for pushed apps sent later by your
+automation. This is how a pushed app keeps its position and time, even though the app itself is
+lost at every restart.
 
 **Switched-off apps stay switched off**, pushed apps included. When your automation sends the app
 again, it stays off.
@@ -419,15 +420,30 @@ curl -X PUT http://<awtrix-ip>/api/v1/apps/order \
 
 ## Change how long each app stays {#timing-and-switching}
 
-Each app stays for 7 seconds, then the next one comes. In the web UI, change **Time per app** under
-**Display → App rotation** and press **Save**.
+Each app stays for 7 seconds by default, then the next one comes.
+
+To change the default in the web UI:
+
+1. Open **Display → App rotation**.
+2. Change **Default time per app**.
+3. Press **Save**.
+
+To give one app its own time:
+
+1. Open the **Apps** tab and press **⚙** on that app's row.
+2. Enter milliseconds in **Time per this app**.
+3. Press **Save time**.
+
+A positive per-app time wins over a pushed app's `durationMs`, a script's `duration()`, and a time
+that scrolling content would choose. Enter `0` to remove the override. The pushed app or script
+then uses its own time when it has one, and the default otherwise.
 
 Over the API, four settings control the rotation:
 
 | Setting | Does | Default |
 |---|---|---|
 | `autoTransition` | `false` stops the rotation. It then moves only when you tell it to | `true` |
-| `appDurationMs` | how long each app is shown | 7000 ms |
+| `appDurationMs` | default time for an app without a per-app or app-provided time | 7000 ms |
 | `transitionDurationMs` | how long the animation between two apps takes | 1000 ms |
 | `transitionEffect` | the animation between two apps | `Rain` |
 
@@ -440,7 +456,26 @@ curl -X PATCH http://<awtrix-ip>/api/v1/settings \
 Upper and lower case do not matter in effect names. All animations:
 [Visual reference – Transitions](../reference/visuals.md#transitions).
 
-A pushed app can set its own time with `durationMs`.
+A pushed app can set its own time with `durationMs`. To save a value that takes priority for one
+app, keep the current `disabled` list and send an `appDurationsMs` patch with the order call:
+
+```bash
+curl -X PUT http://<awtrix-ip>/api/v1/apps/order \
+  -H "Content-Type: application/json" \
+  -d '{"disabled":[],"appDurationsMs":{"weather":12000}}'
+```
+
+The value is a whole number from 1 to 3600000 milliseconds. Send `0` to remove the override:
+
+```bash
+curl -X PUT http://<awtrix-ip>/api/v1/apps/order \
+  -H "Content-Type: application/json" \
+  -d '{"disabled":[],"appDurationsMs":{"weather":0}}'
+```
+
+`disabled` remains the complete list of switched-off apps in both calls. Leaving
+`appDurationsMs` out keeps every saved per-app time. Over MQTT, publish the same body to
+`cmd/apps/order`.
 
 ## Switch apps by hand {#driving-the-loop-by-hand}
 

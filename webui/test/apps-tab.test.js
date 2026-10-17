@@ -184,8 +184,8 @@ async function run() {
   assert(!rowFor('Doorbell').querySelector('.grip'), 'other rows cannot');
 
   // ---- show and start --------------------------------------------------------
-  assert(!!rowFor('Racer').querySelector('.cfgbtn') && !rowFor('Maze').querySelector('.cfgbtn'),
-    'optional settings never add a placeholder beside the primary action');
+  assert(!!rowFor('Racer').querySelector('.cfgbtn') && !!rowFor('Maze').querySelector('.cfgbtn'),
+    'every display app offers its timing settings');
   act(rowFor('Weather'), 'Show').click();
   await flush(30);
   assert(store.active && store.active.name === 'Weather', 'Show puts the app on the display');
@@ -215,7 +215,27 @@ async function run() {
   const gearOf = row => row.querySelector('.racts > .cfgbtn');
   assert(!!gearOf(rowFor('Weather')), 'a script with settings offers Settings');
   assert(!gearOf(rowFor('Doorbell')), 'a script without settings does not');
-  assert(!gearOf(rowFor('Time')), 'an app without configurable fields has no Settings button');
+  assert(!!gearOf(rowFor('Time')), 'a built-in app offers timing without app-specific fields');
+  gearOf(rowFor('Time')).click();
+  await flush(40);
+  const timePanel=rowFor('Time').querySelector('.appcfg');
+  const timeInput=timePanel.querySelector('input[type=number]');
+  const timeSave=[...timePanel.querySelectorAll('button')].find(b=>b.textContent==='Save time');
+  assert(timeInput.value==='0'&&timeSave.disabled, 'timing inherits by default');
+  timeInput.value='2500';
+  timeInput.dispatchEvent(new window.Event('input',{bubbles:true}));
+  timeSave.click();
+  await flush(40);
+  assert(store.order.appDurationsMs.Time===2500, 'saving timing sends the app override');
+  assert(timeSave.disabled, 'saved timing is clean');
+  timeInput.value='-1';
+  timeInput.dispatchEvent(new window.Event('input',{bubbles:true}));
+  assert(timeSave.disabled, 'invalid timing cannot be saved');
+  timeInput.value='0';
+  timeInput.dispatchEvent(new window.Event('input',{bubbles:true}));
+  timeSave.click();
+  await flush(40);
+  assert(store.order.appDurationsMs.Time===0, 'zero restores inherited timing');
 
   assert(!!btn(rowFor('Weather'), 'Install icons'), 'a script that names icons offers to fetch them');
   assert(!btn(rowFor('Doorbell'), 'Install icons'), 'a script that names none does not');

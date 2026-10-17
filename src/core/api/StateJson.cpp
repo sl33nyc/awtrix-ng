@@ -359,6 +359,7 @@ void appendAppsJson(std::string& out, CoreEngine& engine, const script::ScriptHo
     first = false;
     out += "{\"name\":";
     appendJsonString(out, id);
+    out += ",\"appDurationMs\":" + std::to_string(engine.appDurationOverrideMs(id).value_or(0));
     out += ",\"enabled\":";
     out += engine.isEnabled(id) ? "true" : "false";
     out += ",\"inLoop\":";

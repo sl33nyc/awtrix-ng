@@ -140,7 +140,7 @@ down** in the row's **⋯** menu do the same one step at a time.
 |---|---|
 | **Show** | Shows this app on the display right away |
 | **▶ Start** | Starts a script from the device menu. Hold the middle button on the clock to end it |
-| **⚙** | Opens the app's or module's settings under the row. Press it again to close them |
+| **⚙** | Opens the app's time and other settings under the row. Modules have only their shared settings. Press it again to close them |
 | Switch | Switches the app off or on. An app switched on again goes back to the end of the display, or to the background |
 
 The **⋯** menu holds the rest:
@@ -155,6 +155,16 @@ The **⋯** menu holds the rest:
 
 Built-in apps cannot be deleted, only switched off. Scripts are deleted in the [Scripts](#scripts)
 tab.
+
+### Change one app's time
+
+1. Press **⚙** on the app's row.
+2. Enter milliseconds in **Time per this app**.
+3. Press **Save time**.
+
+A positive value sets that app's automatic turn to that time. Enter `0` to use the app's own
+timing, when it has one, or **Display → App rotation → Default time per app** otherwise. The
+setting stays with the app when it is switched off or temporarily has no data.
 
 Under the name, a row says what kind of app it is: *Built-in*, *Script* or *Pushed* (over HTTP or
 MQTT). Labels next to the name point out something to know. Tap one for a short explanation:

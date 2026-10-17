@@ -209,9 +209,10 @@ app - better than drawing an empty panel. Only an outright `false` skips: a miss
 missing hook or a broken script all keep their turn. The question is asked when the rotation
 arrives, not again while drawing, so once up the app stays for its full duration.
 
-`duration()` overrides how long the app stays this turn, in milliseconds; return `0` or leave it
-out for the device's global app time (7000 ms out of the box). It changes only *how long*, never
-*whether* - that is `should_show()`. Time inside `loop()` is counted in calls, not timestamps:
+`duration()` chooses how long the app stays this turn, in milliseconds; return `0` or leave it out
+for the device's default app time (7000 ms out of the box). A positive **Time per this app** value
+saved on the Apps tab takes priority. It changes only *how long*, never *whether* - that is
+`should_show()`. Time inside `loop()` is counted in calls, not timestamps:
 
 ```berry
   def should_show()
